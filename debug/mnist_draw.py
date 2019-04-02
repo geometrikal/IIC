@@ -2,8 +2,10 @@ import cv2
 import numpy as np
 
 from matplotlib import pyplot as plt
+import seaborn as sns
 plt.style.use('seaborn-whitegrid')
 
+palette = sns.color_palette('hls', 10)
 def convex_combo(clstr, label, ax, saveto):
   plt.cla()
   ax.set_xlim([-1,1])
@@ -28,6 +30,6 @@ def convex_combo(clstr, label, ax, saveto):
 
   for k in range(10):
     ix = label == k
-    ax.scatter(x[ix], y[ix], s=1, alpha=0.3)
+    ax.scatter(x[ix], y[ix], s=1, alpha=0.3, c=palette[k])
 
   plt.savefig(saveto, bbox_inches='tight')

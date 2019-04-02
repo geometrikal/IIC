@@ -32,7 +32,7 @@ def perturb_x(x_in, stddev=0.2):
   x_in = tf.clip_by_value(x_in + noise, 0, 1)
   return x_in
 
-def generate_mnist(x_src, y_src, batch_size=32, repeat=3):
+def generate_mnist(x_src, y_src, batch_size=32, repeat=4):
   n_batches = x_src.shape[0] / batch_size
   indices = np.random.choice(np.arange(x_src.shape[0]), int(n_batches*batch_size), replace=False)
   for idx in np.split(indices, n_batches):
