@@ -12,7 +12,7 @@ def genclust(b = 64, k = 10, y=None, seed=0):
     assert y.shape[-1] == k
 
   # Noise it up
-  noise = np.random.randn(*y.shape)
+  noise = np.around(np.random.randn(*y.shape), decimals=5)
   y *= noise
 
   return softmax(y, axis=-1)

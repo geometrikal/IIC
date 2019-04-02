@@ -3,19 +3,7 @@ import tensorflow as tf
 
 import numpy as np
 from scipy.special import softmax
-def genclust(b = 64, k = 10, y=None, seed=0, noise_scale=1., add_noise=True):
-  np.random.seed(seed)
-  if y is None:
-    # Generate class assignment if none is given
-    y = np.random.choice(range(k), b, replace=True)
-    y = np.eye(k)[y]  # onehot
-  else:
-    assert y.shape[-1] == k
-  # Noise it up
-  if add_noise:
-    noise = np.random.randn(*y.shape) * noise_scale
-    y += noise
-  return softmax(y, axis=-1)
+from generate_clusterings import genclust
   
 
 def IID_loss(x_out, x_tf_out, lamb=1.0, EPS=sys.float_info.epsilon):
@@ -44,26 +32,16 @@ def test_IID_loss():
   b = 64
   k = 10
 
-  print('Seed 1, 2')
-  x_out    = genclust(b=b, k=k, seed=1)
-  x_tf_out = genclust(b=b, k=k, seed=2)
+  print('Independent vectors:')
+  x_out    = genclust(b=b, k=k, seed=100)
+  x_tf_out = genclust(b=b, k=k, seed=200)
   loss = IID_loss(x_out, x_tf_out)
   print(loss.numpy())
 
-  print('Seed 1, 1, noise ~ N(0,1)')
-  x_out    = genclust(b=b, k=k, seed=1)
-  x_tf_out = genclust(b=b, k=k, seed=1)
+  print('The same vector:')
+  x_out    = genclust(b=b, k=k, seed=100)
+  x_tf_out = genclust(b=b, k=k, seed=100)
   loss = IID_loss(x_out, x_tf_out)
-  print(loss.numpy())
-
-  print('Seed 1, 1, noise ~ N(0,3)')
-  x_out    = genclust(b=b, k=k, seed=1, noise_scale=3.)
-  loss = IID_loss(x_out, x_out)
-  print(loss.numpy())
-
-  print('Seed 1, 1, No noise')
-  x_out    = genclust(b=b, k=k, seed=1, add_noise=False)
-  loss = IID_loss(x_out, x_out)
   print(loss.numpy())
 
 if __name__ == '__main__':
