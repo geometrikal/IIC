@@ -20,22 +20,23 @@ class ClusterModel(tf.keras.Model):
     # self.mylayers += [Dense(512, activation=tf.nn.relu)]
     # self.mylayers += [Dropout(0.5)]
 
-    self.mylayers += [Conv2D(64, (7,7), (3,3), activation=tf.nn.relu)]
-    self.mylayers += [Conv2D(128, (3,3), (2,2), activation=tf.nn.relu)]
+    self.mylayers += [MaxPooling2D((2,2), (2,2))]
+    self.mylayers += [Conv2D(64, (5,5), (2,2), activation=tf.nn.relu)]
+    self.mylayers += [Conv2D(128, (2,2), (1,1), activation=tf.nn.relu)]
     # self.mylayers += [Conv2D(256, (3,3), (1,1), activation=tf.nn.relu)]
     self.mylayers += [Conv2D(256, (2,2), (1,1), activation=tf.nn.relu)]
     self.mylayers += [Flatten()]
     # self.mylayers += [Dropout(0.5)]
     self.mylayers += [Dense(512, activation=tf.nn.relu)]
 
-    # self.mainheads = []
-    for k in range(heads):
-      self.mainheads += [Dense(k, activation=tf.nn.softmax, name='k{}'.format(k))]
+    self.mainheads = []
+    for j in range(heads):
+      self.mainheads += [Dense(k, activation=tf.nn.softmax, name='k{}'.format(j))]
 
     if aux_overcluster:
       self.auxheads = []
-      for k in range(heads):
-        self.auxheads += [Dense(k*3, activation=tf.nn.softmax, name='aux{}'.format(k))]
+      for j in range(heads):
+        self.auxheads += [Dense(k*3, activation=tf.nn.softmax, name='aux{}'.format(j))]
 
   def call(self, x, head='main', verbose=False):
     for l in self.mylayers:
@@ -43,9 +44,9 @@ class ClusterModel(tf.keras.Model):
       if verbose:
         print(l.name, ':' , x.shape)
     if head=='main':
-      rets = [l(x) for x in self.mainheads]
+      rets = [l(x) for l in self.mainheads]
     elif head=='aux':
-      rets = [l(x) for x in self.auxheads]
+      rets = [l(x) for l in self.auxheads]
     return rets
 
 def chain_crop_resize(x):
@@ -93,9 +94,11 @@ def main():
   x_batch, x_perturb, y_batch = next(mnist_generator)
   print('x_batch:', x_batch.shape)
   z = model(x_batch, head='main', verbose=True)
-  print('z:', z[0].shape)
+  for z_ in z:
+    print('z:', z_.shape)
   z = model(x_batch, head='aux')
-  print('z overclust:', z[0].shape)
+  for z_ in z:
+    print('z:', z_.shape)
   model.summary()
 
   optimizer = tf.train.AdamOptimizer(learning_rate=1e-4)
@@ -123,8 +126,8 @@ def main():
       optimizer.apply_gradients(zip(grads, model.trainable_variables))
 
       if k % 100 == 0:
-        zmax = tf.argmax(z, axis=-1).numpy()
-        zpmax = tf.argmax(zp, axis=-1).numpy()
+        zmax = tf.argmax(z[0], axis=-1).numpy()
+        zpmax = tf.argmax(zp[0], axis=-1).numpy()
         print(zmax, np.unique(zmax))
         print(zpmax, np.unique(zpmax))
         print('e: {} k: {} loss={} acc={}'.format(e, k, loss.numpy(), (zmax==zpmax).mean()))
@@ -133,7 +136,7 @@ def main():
     ztest = []
     ylabel = []
     for j, (x_batch, y_batch) in enumerate(generate_mnist(x_train, y_train, repeat=1, batch_size=batch_size, perturb=False)):
-      ztest.append(model(x_batch, head='main'))
+      ztest.append(model(x_batch, head='main')[0])
       ylabel.append(y_batch)
 
     ztest = np.concatenate(ztest, axis=0)
