@@ -30,6 +30,7 @@ def convex_combo(clstr, label, ax, saveto):
 
   for k in range(10):
     ix = label == k
-    ax.scatter(x[ix], y[ix], s=1, alpha=0.3, c=palette[k])
+    ax.scatter(x[ix], y[ix], s=1, alpha=1, c=palette[k], label='{}'.format(k))
 
+  plt.legend(bbox_to_anchor=(1,1))
   plt.savefig(saveto, bbox_inches='tight')
