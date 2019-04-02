@@ -1,4 +1,4 @@
-Core components needed to perform IIC, implemented in tensorflow with heavy reference to the reference pytorch implimentations.
+Core components needed to perform IIC, implemented in tensorflow with heavy reference to the pytorch implimentations.
 
 package requirements:
 scipy >= 1.2 (scipy introduced a softmax function I use)
