@@ -11,6 +11,8 @@ from tensorflow.keras.layers import (
 from matplotlib import pyplot as plt
 plt.style.use('seaborn-whitegrid')
 
+from data import get_iterator
+
 class ClusterModel(tf.keras.Model):
   def __init__(self, k=10, heads=5, aux_overcluster=True):
     super(ClusterModel, self).__init__()
@@ -59,9 +61,9 @@ def chain_crop_resize(x):
 def perturb_x(x, stddev=0.15):
   # Perturb with additive noise
   noise = tf.random.normal(stddev=stddev, shape=x.shape)
-  x = tf.clip_by_value(x + noise, 0, 1)
   # x = tf.map_fn(tf.image.random_flip_left_right, x, parallel_iterations=4)
   x = tf.map_fn(chain_crop_resize, x, parallel_iterations=4)
+  x = tf.clip_by_value(x + noise, 0, 1)
   return x
 
 def generate_mnist(x_src, y_src, batch_size=32, repeat=4, perturb=True):
@@ -83,15 +85,19 @@ def generate_mnist(x_src, y_src, batch_size=32, repeat=4, perturb=True):
 def main():
   k = 10
   epochs = 30
-  batch_size = 16
+  batchsize = 96
   mnist = tf.keras.datasets.mnist
   (x_train, y_train),(x_test, y_test) = mnist.load_data()
   x_train, x_test = x_train / 255.0, x_test / 255.0
   print('x_train:', x_train.shape)
 
+  # mnist_generator = generate_mnist(x_train, y_train, batchsize=batchsize)
+  mnist_iterator = get_iterator(x_train, y_train, batchsize=batchsize)
+  x_batch, x_perturb, y_batch = next(mnist_iterator)
+
+  print('xbatch', x_batch.shape, 'xperturb', x_perturb.shape, 'ybatch', y_batch.shape)
+
   model = ClusterModel(k=k)
-  mnist_generator = generate_mnist(x_train, y_train, batch_size=batch_size)
-  x_batch, x_perturb, y_batch = next(mnist_generator)
   print('x_batch:', x_batch.shape)
   z = model(x_batch, head='main', verbose=True)
   for z_ in z:
@@ -107,14 +113,15 @@ def main():
   ax.set_xlim([-1,1])
   ax.set_ylim([-1,1])
   for e in range(epochs):
-    if e % 2 == 0:
-      trainhead = 'main'
-    else:
-      trainhead = 'aux'
+    # mnist_generator = generate_mnist(x_train, y_train, batchsize=batchsize)
 
-    mnist_generator = generate_mnist(x_train, y_train, batch_size=batch_size)
+    mnist_iterator = get_iterator(x_train, y_train, batchsize=batchsize)
+    for k, (x_batch, x_perturb, y_batch) in enumerate(mnist_iterator):
+      if k % 2 == 0:
+        trainhead = 'main'
+      else:
+        trainhead = 'aux'
 
-    for k, (x_batch, x_perturb, y_batch) in enumerate(mnist_generator):
       with tf.GradientTape() as tape:
         z = model(x_batch, head=trainhead)
         zp = model(x_perturb, head=trainhead)
@@ -130,12 +137,15 @@ def main():
         zpmax = tf.argmax(zp[0], axis=-1).numpy()
         print(zmax, np.unique(zmax))
         print(zpmax, np.unique(zpmax))
+        print(y_batch)
         print('e: {} k: {} loss={} acc={}'.format(e, k, loss.numpy(), (zmax==zpmax).mean()))
 
     # Each epoch
     ztest = []
     ylabel = []
-    for j, (x_batch, y_batch) in enumerate(generate_mnist(x_train, y_train, repeat=1, batch_size=batch_size, perturb=False)):
+    mnist_iterator = get_iterator(x_test, y_test, batchsize=batchsize)
+    # for j, (x_batch, y_batch) in enumerate(generate_mnist(x_train, y_train, repeat=1, batch_size=batch_size, perturb=False)):
+    for j, (x_batch, x_perturb, y_batch) in enumerate(mnist_iterator):
       ztest.append(model(x_batch, head='main')[0])
       ylabel.append(y_batch)
 
