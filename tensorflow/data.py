@@ -4,20 +4,20 @@ import numpy as np
 def get_iterator(x, y, batchsize=32, repeat=4):
   generator = lambda: _make_generator(x,y)
   dataset = _make_tf_dataset(generator, batchsize, repeat)
-  
   iterator = dataset.make_one_shot_iterator()
 
   return iterator
 
 def _make_tf_dataset(generator, batchsize=32, repeat=4):
   # perturb the input ; skip the repeat parameter for now
+
   def mapped_fn(x, y):
-    print('mapped fn', x.shape, y.shape)
     xp = tf.expand_dims(x, 0)
     xp = tf.image.random_crop(xp, [1, 21, 21, 1])
     xp = tf.image.resize_image_with_pad(xp, 28, 28)
     noise = tf.random.normal(stddev=0.2, shape=(28, 28, 1))
     xp = tf.clip_by_value(xp + noise, 0, 1)
+    # xp = tf.image.random_flip_left_right(xp)
     xp = tf.squeeze(xp, 0)
     return x, xp, y
 

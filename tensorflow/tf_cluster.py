@@ -24,12 +24,13 @@ class ClusterModel(tf.keras.Model):
 
     self.mylayers += [MaxPooling2D((2,2), (2,2))]
     self.mylayers += [Conv2D(64, (5,5), (2,2), activation=tf.nn.relu)]
-    self.mylayers += [Conv2D(128, (2,2), (1,1), activation=tf.nn.relu)]
-    # self.mylayers += [Conv2D(256, (3,3), (1,1), activation=tf.nn.relu)]
+    self.mylayers += [Dropout(0.5)]
     self.mylayers += [Conv2D(256, (2,2), (1,1), activation=tf.nn.relu)]
+    self.mylayers += [Dropout(0.5)]
+    self.mylayers += [Conv2D(512, (2,2), (1,1), activation=tf.nn.relu)]
     self.mylayers += [Flatten()]
-    # self.mylayers += [Dropout(0.5)]
-    self.mylayers += [Dense(512, activation=tf.nn.relu)]
+    self.mylayers += [Dropout(0.5)]
+    self.mylayers += [Dense(1024, activation=tf.nn.relu)]
 
     self.mainheads = []
     for j in range(heads):
@@ -38,7 +39,7 @@ class ClusterModel(tf.keras.Model):
     if aux_overcluster:
       self.auxheads = []
       for j in range(heads):
-        self.auxheads += [Dense(k*3, activation=tf.nn.softmax, name='aux{}'.format(j))]
+        self.auxheads += [Dense(k*(j+1), activation=tf.nn.softmax, name='aux{}'.format(j))]
 
   def call(self, x, head='main', verbose=False):
     for l in self.mylayers:
@@ -85,7 +86,7 @@ def generate_mnist(x_src, y_src, batch_size=32, repeat=4, perturb=True):
 def main():
   k = 10
   epochs = 30
-  batchsize = 96
+  batchsize = 128
   mnist = tf.keras.datasets.mnist
   (x_train, y_train),(x_test, y_test) = mnist.load_data()
   x_train, x_test = x_train / 255.0, x_test / 255.0
@@ -141,19 +142,23 @@ def main():
         print('e: {} k: {} loss={} acc={}'.format(e, k, loss.numpy(), (zmax==zpmax).mean()))
 
     # Each epoch
-    ztest = []
+    ztest = {r: [] for r in range(5)}
     ylabel = []
     mnist_iterator = get_iterator(x_test, y_test, batchsize=batchsize)
     # for j, (x_batch, y_batch) in enumerate(generate_mnist(x_train, y_train, repeat=1, batch_size=batch_size, perturb=False)):
     for j, (x_batch, x_perturb, y_batch) in enumerate(mnist_iterator):
-      ztest.append(model(x_batch, head='main')[0])
+      # ztest.append(model(x_batch, head='main')[0])
+      for i,h in enumerate(model(x_batch, head='main')):
+        ztest[i].append(h)
       ylabel.append(y_batch)
 
-    ztest = np.concatenate(ztest, axis=0)
+    # ztest = np.concatenate(ztest, axis=0)
     ylabel = np.concatenate(ylabel)
-    print('ztest', ztest.shape)
     print('ylabel', ylabel.shape)
-    convex_combo(ztest, ylabel, ax, 'pointcloud/{}_{}.png'.format(e, k))
+    for r in range(5):
+      ztest[r] = np.concatenate(ztest[r], axis=0)
+      print('ztest', ztest[r].shape)
+      convex_combo(ztest[r], ylabel, ax, 'pointcloud/{}_{}.png'.format(e, r))
 
 if __name__ == '__main__':
   tf.enable_eager_execution()
