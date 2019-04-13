@@ -1,4 +1,4 @@
-Core components needed to perform IIC, implemented in tensorflow with heavy reference to the pytorch implimentations.
+Core components needed to perform IIC, implemented in tensorflow, directly porting the reference pytorch version of the loss function.
 
 package requirements:
 scipy >= 1.2 (scipy introduced a softmax function I use)
@@ -32,3 +32,5 @@ It wants a directory called `pointcloud` for drawing the mnist point clouds.
 ```
 python tf_cluster.py
 ```
+
+The performance of the clustering depends heavily on the model architecture, auxiliary overclustering, and the transforms applied.
