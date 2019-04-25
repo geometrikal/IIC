@@ -8,8 +8,8 @@ plt.style.use('seaborn-whitegrid')
 palette = sns.color_palette('hls', 10)
 def convex_combo(clstr, label, ax, saveto):
   plt.cla()
-  ax.set_xlim([-1,1])
-  ax.set_ylim([-1,1])
+  ax.set_xlim([-1.1,1.1])
+  ax.set_ylim([-1.1,1.1])
   def get_coord(probs, num_classes=10):
     # computes coordinate for 1 sample based on probability distribution over c
     coords_total = np.zeros(2, dtype=np.float32)
@@ -27,10 +27,28 @@ def convex_combo(clstr, label, ax, saveto):
   print(xy.shape)
   x = xy[0,:]
   y = xy[1,:]
+  print('x', x.shape)
+  print('y', y.shape)
+  print('label', label.shape)
+
+  sel = np.random.binomial(1,0.15,size=len(x))
+  print('sel', sel.shape)
+
+  x     =     np.squeeze(x[np.argwhere(sel)])
+  y     =     np.squeeze(y[np.argwhere(sel)])
+  label = np.squeeze(label[np.argwhere(sel)])
+  print('selected', sel.sum(), len(x))
+  print('x', x.shape)
+  print('y', y.shape)
+  print('label', label.shape)
+
+  x = x + np.random.normal(0, 0.05, size=len(x))
+  y = y + np.random.normal(0, 0.05, size=len(y))
 
   for k in range(10):
-    ix = label == k
-    ax.scatter(x[ix], y[ix], s=1, alpha=1, c=[palette[k]] * ix.sum(), label='{}'.format(k))
+    ix = np.squeeze(label == k)
+    print('\t{}:{}'.format(k, ix.sum()))
+    ax.scatter(x[ix], y[ix], s=1, alpha=0.5, c=[palette[k]] * ix.sum(), label='{}'.format(k))
 
   plt.legend(bbox_to_anchor=(1,1))
   plt.savefig(saveto, bbox_inches='tight')

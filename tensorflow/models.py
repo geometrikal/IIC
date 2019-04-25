@@ -6,7 +6,7 @@ from mnist_draw import convex_combo
 
 from tensorflow.keras.layers import (
   Conv2D, Dense, GlobalMaxPooling2D, MaxPooling2D, Dropout, Flatten, 
-  BatchNormalization
+  BatchNormalization, Lambda
 )
 
 class VGGModel(tf.keras.Model):
@@ -65,52 +65,52 @@ class ResNetModel(tf.keras.Model):
     super(ResNetModel, self).__init__()
     self.trunk, self.blocks, self.downsamplers = [], [], []
     self.clusterer = [] 
-    self.batchnorms = []
 
-    self.trunk += [Conv2D(64, (5,5), (2,2), activation=tf.nn.relu,
+    self.trunk += [Conv2D(32, (5,5), (2,2), activation=tf.nn.relu,
                              kernel_initializer='he_normal', 
+                             padding='SAME',
                              name='c11')]
-    # self.downsamplers += [MaxPooling2D((2,2), (2,2))]
-    self.blocks += [self._make_residual_block(2, 64, 1)]
+    self.blocks += [self._make_residual_block(2, 32, 1)]
+
+    self.trunk += [Conv2D(32, (3,3), (2,2), activation=tf.nn.relu,
+                             kernel_initializer='he_normal', 
+                             padding='SAME',
+                             name='c21')]
+    self.blocks += [self._make_residual_block(2, 32, 2)]
 
     self.trunk += [Conv2D(64, (3,3), (2,2), activation=tf.nn.relu,
                              kernel_initializer='he_normal', 
-                            #  padding='SAME',
-                             name='c11')]
-    # self.downsamplers += [MaxPooling2D((2,2), (2,2))]
-    self.blocks += [self._make_residual_block(2, 64, 2)]
-
-    # self.trunk += [Conv2D(64, (3,3), (2,2), activation=tf.nn.relu,
-    #                          kernel_initializer='he_normal', 
-    #                         #  padding='SAME',
-    #                          name='c11')]
-    # # self.downsamplers += [MaxPooling2D((3,3), (2,2))]
-    # self.blocks.append(self._make_residual_block(3, 64, 2))
+                             padding='SAME',
+                             name='c31')]
+    self.blocks.append(self._make_residual_block(2, 64, 3))
 
     self.clusterer += [Flatten()]
     # self.trunk += [Dropout(0.5)]
-    self.clusterer += [Dense(1024, activation=tf.nn.relu,
-                            kernel_initializer='he_normal')]
-    # self.trunk += [Dropout(0.5)]
     self.clusterer += [Dense(512, activation=tf.nn.relu,
                             kernel_initializer='he_normal')]
+    # self.trunk += [Dropout(0.5)]
+    # self.clusterer += [Dense(1024, activation=tf.nn.relu,
+    #                         kernel_initializer='he_normal')]
 
     self.mainheads = []
-    for j in range(heads):
-      self.mainheads += [Dense(k, activation=tf.nn.softmax, name='k{}'.format(j),
+    for j in range(1):
+      self.mainheads += [Dense(k, activation=tf.nn.softmax, 
+                               name='k{}'.format(j),
                                kernel_initializer='he_normal')]
 
     if aux_overcluster:
       self.auxheads = []
       for j in range(heads):
-        self.auxheads += [Dense(k*3, activation=tf.nn.softmax, name='aux{}'.format(j),
+        self.auxheads += [Dense(k*3, activation=tf.nn.softmax, 
+                                name='aux{}'.format(j),
                                 kernel_initializer='he_normal')]
 
   def call(self, x, head='main', verbose=False):
     for trunk_layer, res_block in zip(self.trunk, self.blocks):
       # xds = ds(x)
       x = trunk_layer(x)# + xds
-      x = self._call_residual_block(x, res_block)
+      x_ = self._call_residual_block(x, res_block)
+      x = tf.concat([x, x_], axis=-1)
       if verbose:
         print('res', x.shape)
 
@@ -127,9 +127,9 @@ class ResNetModel(tf.keras.Model):
     z_out = z_in 
     # print('callres', z_out.shape)
     for l in block:
-      z_out = z_out + l(z_out)
+      z_out = l(z_out)
       # print('callres loop', z_out.shape)
-    return z_out
+    return z_in + z_out
 
   def _make_residual_block(self, nblocks, filters, blocknum,
                            convargs={
@@ -142,5 +142,5 @@ class ResNetModel(tf.keras.Model):
     for k in range(nblocks):
       layers.append(
         Conv2D(filters, name='rc{}-{}'.format(blocknum, k), **convargs))
-      layers.append(BatchNormalization())
+      # layers.append(BatchNormalization())
     return layers
