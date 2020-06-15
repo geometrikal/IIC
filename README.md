@@ -1,3 +1,5 @@
+Forked from https://github.com/nathanin/IIC (Tensorflow version) which was forked from the original repository at https://github.com/xu-ji/IIC (PyTorch version)
+
 # Invariant Information Clustering for Unsupervised Image Classification and Segmentation
 
 This repository contains PyTorch code for the <a href="https://arxiv.org/abs/1807.06653">IIC paper</a>.
